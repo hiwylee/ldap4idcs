@@ -1,0 +1,107 @@
+# OpenAM Dockerfile - 최적화된 버전
+FROM openidentityplatform/openam:14.7.2
+
+# 메타데이터
+LABEL maintainer="Oracle IAM Team"
+LABEL description="Oracle OpenAM Identity Provider for SAML SSO"
+LABEL version="14.7.2-oracle"
+
+# 환경 변수 설정
+ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true"
+ENV CATALINA_OPTS="-Xms4g -Xmx16g -XX:MetaspaceSize=512m -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -server -Djava.awt.headless=true"
+ENV OPENAM_ROOT_PASSWORD="Oracle_12345"
+
+# 시스템 패키지 업데이트 및 필수 도구 설치
+USER root
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        wget \
+        telnet \
+        net-tools \
+        ldap-utils \
+        xmlstarlet \
+        jq \
+        vim \
+        dnsutils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# OpenAM 커스터마이징
+RUN mkdir -p /usr/openam/custom \
+             /usr/openam/scripts \
+             /usr/openam/backup
+
+# 헬스체크 스크립트 생성
+RUN echo '#!/bin/bash\n\
+curl -f http://localhost:8080/openam/isAlive.jsp || exit 1\n\
+curl -f http://localhost:8080/openam/json/serverinfo/* || exit 1' \
+    > /usr/openam/scripts/healthcheck.sh && \
+    chmod +x /usr/openam/scripts/healthcheck.sh
+
+# SAML metadata export 스크립트 생성
+RUN echo '#!/bin/bash\n\
+ENTITY_ID=${1:-"http://localhost:8080/openam"}\n\
+REALM=${2:-"/"}\n\
+OUTPUT_FILE=${3:-"/tmp/saml-metadata.xml"}\n\
+\n\
+curl -s "http://localhost:8080/openam/saml2/jsp/exportmetadata.jsp?entityid=$ENTITY_ID&realm=$REALM" > "$OUTPUT_FILE"\n\
+\n\
+if [ -s "$OUTPUT_FILE" ]; then\n\
+    echo "Metadata exported to: $OUTPUT_FILE"\n\
+    xmllint --format "$OUTPUT_FILE"\n\
+else\n\
+    echo "Failed to export metadata"\n\
+    exit 1\n\
+fi' > /usr/openam/scripts/export-metadata.sh && \
+    chmod +x /usr/openam/scripts/export-metadata.sh
+
+# 설정 백업 스크립트 생성
+RUN echo '#!/bin/bash\n\
+BACKUP_DIR="/usr/openam/backup/$(date +%Y%m%d_%H%M%S)"\n\
+mkdir -p "$BACKUP_DIR"\n\
+\n\
+if [ -d "/usr/openam/config" ]; then\n\
+    tar czf "$BACKUP_DIR/openam-config.tar.gz" -C /usr/openam/config .\n\
+    echo "Configuration backed up to: $BACKUP_DIR/openam-config.tar.gz"\n\
+else\n\
+    echo "No configuration directory found"\n\
+fi' > /usr/openam/scripts/backup-config.sh && \
+    chmod +x /usr/openam/scripts/backup-config.sh
+
+# JVM 튜닝을 위한 스크립트
+RUN echo '#!/bin/bash\n\
+echo "=== OpenAM JVM 정보 ==="\n\
+echo "Java Version:"\n\
+java -version\n\
+echo ""\n\
+echo "JVM Memory Info:"\n\
+jcmd $(pgrep java) VM.info | grep -E "heap|gc"\n\
+echo ""\n\
+echo "System Memory:"\n\
+free -h\n\
+echo ""\n\
+echo "OpenAM Process Info:"\n\
+ps aux | grep java' > /usr/openam/scripts/jvm-info.sh && \
+    chmod +x /usr/openam/scripts/jvm-info.sh
+
+# 포트 노출
+EXPOSE 8080 8443
+
+# 볼륨 설정
+VOLUME ["/usr/openam/config", "/usr/openam/custom", "/usr/openam/backup"]
+
+# 헬스체크 설정
+HEALTHCHECK --interval=30s --timeout=10s --retries=10 --start-period=120s \
+    CMD ["/usr/openam/scripts/healthcheck.sh"]
+
+# Create and switch to tomcat user
+RUN groupadd -r tomcat && useradd -r -g tomcat -d /usr/openam tomcat && \
+    mkdir -p /usr/local/tomcat/logs && \
+    chown -R tomcat:tomcat /usr/local/tomcat /usr/openam
+
+# Tomcat 사용자로 전환
+USER tomcat
+
+# 시작 명령어
+CMD ["catalina.sh", "run"]

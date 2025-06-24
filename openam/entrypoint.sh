@@ -4,7 +4,7 @@ set -e
 echo "=== MINIMAL OPENLDAP TEST ==="
 
 # 환경 변수 기본값
-LDAP_BASE_DN=${LDAP_BASE_DN:-"dc=example,dc=com"}
+LDAP_BASE_DN=${LDAP_BASE_DN:-"dc=oracle,dc=local"}
 LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD:-"Oracle_12345"}
 
 # 디렉토리 생성

@@ -1,0 +1,172 @@
+# version: '3.8'
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap-server
+    #hostname: openldap.oracle.local
+    environment:
+      - LDAP_ORGANISATION=My Company
+      - LDAP_DOMAIN=oracle.local
+      - LDAP_BASE_DN=dc=oracle,dc=local
+      - LDAP_ADMIN_PASSWORD=Oracle_12345
+      - LDAP_CONFIG_PASSWORD=Oracle_12345
+      - LDAP_READONLY_USER=false
+      - LDAP_RFC2307BIS_SCHEMA=false
+      - LDAP_BACKEND=mdb
+      - LDAP_TLS=false 
+      - LDAP_TLS_CRT_FILENAME=ldap.crt
+      - LDAP_TLS_KEY_FILENAME=ldap.key
+      - LDAP_TLS_DH_PARAM_FILENAME=dhparam.pem
+      - LDAP_TLS_CA_CRT_FILENAME=ca.crt
+      - LDAP_TLS_ENFORCE=false
+      - LDAP_TLS_CIPHER_SUITE=SECURE256:-VERS-SSL3.0
+      - LDAP_TLS_VERIFY_CLIENT=demand
+      - LDAP_REPLICATION=false
+      - KEEP_EXISTING_CONFIG=false
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=true
+      - LDAP_SSL_HELPER_PREFIX=ldap
+      - LDAP_LOG_LEVEL=65000
+    tty: true
+    stdin_open: true
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      - ldap_certs:/container/service/slapd/assets/certs/
+    ports:
+      - "389:389"
+    networks:
+      - oracle-network
+    mem_limit: 512m
+    restart: unless-stopped
+    
+    # Health check for LDAP service
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -b 'dc=oracle,dc=local' -D 'cn=admin,dc=oracle,dc=local' -w Oracle_12345 '(objectclass=*)' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # OpenAM Identity Provider
+  openam:
+    build:
+      context: .
+      dockerfile: Dockerfile.openam
+    container_name: openam-server
+    #hostname: openam.oracle.local
+    
+    # 60GB 메모리 환경 최적화
+    environment:
+      CATALINA_OPTS: >-
+        -Xms8g 
+        -Xmx20g 
+        -XX:MetaspaceSize=1g 
+        -XX:MaxMetaspaceSize=2g
+        -XX:+UseG1GC 
+        -XX:MaxGCPauseMillis=200
+        -XX:+UseStringDeduplication
+        -XX:+OptimizeStringConcat
+        -XX:+UseCompressedOops
+        -XX:+UseCompressedClassPointers
+        -server
+        -Djava.awt.headless=true
+        -Dcom.sun.identity.configuration.directory=/usr/openam/config
+        -Dcom.sun.identity.log.level=MESSAGE
+        -Dcom.iplanet.am.server.host=openam.oracle.local
+        -Dcom.iplanet.am.server.port=8080
+        -Dcom.iplanet.am.server.protocol=http
+        -Dcom.sun.identity.sm.cache_size=10000
+        -Dcom.sun.identity.session.cache_size=10000
+      
+      JAVA_OPTS: >-
+        -Djava.security.egd=file:/dev/./urandom
+        -Djava.net.preferIPv4Stack=true
+        -Dfile.encoding=UTF-8
+        -Duser.timezone=Asia/Seoul
+        
+      OPENAM_ROOT_PASSWORD: "Oracle_12345"
+    
+    # 시스템 리소스 최적화
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    
+    # 메모리 제한 (60GB 중 최대 25GB 할당)
+    mem_limit: 25g
+    memswap_limit: 25g
+    
+    volumes:
+      - openam-data:/usr/openam/config
+      - openam-logs:/usr/local/tomcat/logs
+      - openam-custom:/usr/openam/custom
+      - openam-backup:/usr/openam/backup
+    
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    
+    depends_on:
+      openldap:
+        condition: service_healthy
+    
+    networks:
+      - oracle-network
+    
+    restart: unless-stopped
+    
+    # healthcheck:
+    #   test: ["CMD", "/usr/openam/scripts/healthcheck.sh"]
+    #   interval: 30s
+    #   timeout: 15s
+    #   retries: 10
+    #   start_period: 180s
+
+  # phpLDAPadmin - LDAP 웹 관리 도구
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: phpldapadmin-server
+    hostname: phpldapadmin.oracle.local
+    
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap.oracle.local"
+      PHPLDAPADMIN_HTTPS: "false"
+      PHPLDAPADMIN_TRUST_PROXY_SSL: "true"
+      PHPLDAPADMIN_LDAP_CLIENT_TLS: "false"
+    
+    ports:
+      - "8081:80"
+    
+    depends_on:
+      openldap:
+        condition: service_healthy
+    
+    networks:
+      - oracle-network
+    
+    restart: unless-stopped
+
+# Docker 볼륨 정의
+volumes:
+  ldap_data:
+  ldap_config:
+  ldap_certs:
+  
+  # OpenAM 관련 볼륨
+  openam-data:
+  openam-logs:
+  openam-custom:
+  openam-backup:
+
+# 네트워크 정의
+networks:
+  oracle-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

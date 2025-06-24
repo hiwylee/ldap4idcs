@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  openldap:
+    build: .
+    container_name: openldap_server
+    environment:
+      - LDAP_ORGANISATION=My Company
+      - LDAP_DOMAIN=example.com
+      - LDAP_BASE_DN=dc=example,dc=com
+      - LDAP_ADMIN_PASSWORD=Oracle_12345
+      - LDAP_CONFIG_PASSWORD=Oracle_12345
+      - LDAP_LOG_LEVEL=65000
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+    restart: unless-stopped
+    networks:
+      - ldap_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # OpenLDAP 관리용 웹 인터페이스 (선택사항)
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    container_name: phpldapadmin
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=openldap
+      - PHPLDAPADMIN_HTTPS=false
+    ports:
+      - "8080:80"
+    depends_on:
+      - openldap
+    networks:
+      - ldap_network
+
+volumes:
+  ldap_data:
+  ldap_config:
+
+networks:
+  ldap_network:
+    driver: bridge

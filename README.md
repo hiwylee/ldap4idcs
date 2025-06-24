@@ -73,6 +73,7 @@ sudo firewall-cmd --permanent --add-port=8000/tcp    # FastAPI
 sudo firewall-cmd --permanent --add-port=389/tcp     # LDAP
 sudo firewall-cmd --permanent --add-port=636/tcp     # LDAPS
 sudo firewall-cmd --permanent --add-port=5432/tcp    # PostgreSQL
+
 sudo firewall-cmd --reload
 
 # Ubuntu (ufw)
