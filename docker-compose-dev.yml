@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sso_postgres_dev
+    environment:
+      POSTGRES_DB: sso_db
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD: sso_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sso_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sso_user -d sso_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OpenLDAP Server (External Connection)
+  # Note: This service connects to external LDAP server
+  # ldapv3-idp.duckdns.org (158.180.82.84)
+  ldap-client:
+    image: alpine:latest
+    container_name: sso_ldap_client_dev
+    command: >
+      sh -c "
+        apk add --no-cache openldap-clients &&
+        echo 'LDAP client tools installed. Use for testing external LDAP connection.' &&
+        echo 'Test command: ldapsearch -x -H ldaps://ldapv3-idp.duckdns.org:636 -D \"cn=admin,dc=ldapv3-idp,dc=duckdns,dc=org\" -W -b \"dc=ldapv3-idp,dc=duckdns,dc=org\"' &&
+        tail -f /dev/null
+      "
+    networks:
+      - sso_network
+    volumes:
+      - ./ssl:/etc/ssl/certs:ro
+    extra_hosts:
+      - "ldapv3-idp.duckdns.org:158.180.82.84"
+
+  # LDAP Admin Interface (for external LDAP management)
+  ldap-admin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: sso_ldap_admin_dev
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "ldapv3-idp.duckdns.org"
+      PHPLDAPADMIN_HTTPS: "false"
+      PHPLDAPADMIN_TRUST_PROXY_SSL: "true"
+    ports:
+      - "8080:80"
+    networks:
+      - sso_network
+    extra_hosts:
+      - "ldapv3-idp.duckdns.org:158.180.82.84"
+    restart: unless-stopped
+
+  # Redis for Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: sso_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sso_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: sso_backend_dev
+    environment:
+      - DATABASE_URL=postgresql://sso_user:sso_password@postgres:5432/sso_db
+      - REDIS_URL=redis://redis:6379/0
+      - LDAP_SERVER=ldaps://ldapv3-idp.duckdns.org:636
+      - LDAP_FQDN=ldapv3-idp.duckdns.org
+      - LDAP_IP=158.180.82.84
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./ssl:/app/ssl
+    ports:
+      - "8000:8000"
+    networks:
+      - sso_network
+    extra_hosts:
+      - "ldapv3-idp.duckdns.org:158.180.82.84"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: sso_frontend_dev
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    networks:
+      - sso_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    command: npm run dev
+
+  # Nginx Reverse Proxy (Development)
+  nginx:
+    image: nginx:alpine
+    container_name: sso_nginx_dev
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/nginx.conf
+      - ./logs:/var/log/nginx
+    ports:
+      - "80:80"
+    networks:
+      - sso_network
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sso_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

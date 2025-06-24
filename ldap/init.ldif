@@ -1,0 +1,602 @@
+# =================================================================
+# OpenLDAP Initial Directory Structure
+# OCI IDCS SSO Platform
+# =================================================================
+
+# =================================================================
+# Organizational Units
+# =================================================================
+
+# Users OU
+dn: ou=users,dc=company,dc=com
+objectClass: organizationalUnit
+ou: users
+description: Container for user accounts
+
+# Groups OU
+dn: ou=groups,dc=company,dc=com
+objectClass: organizationalUnit
+ou: groups
+description: Container for groups
+
+# Applications OU
+dn: ou=applications,dc=company,dc=com
+objectClass: organizationalUnit
+ou: applications
+description: Container for applications
+
+# Services OU
+dn: ou=services,dc=company,dc=com
+objectClass: organizationalUnit
+ou: services
+description: Container for service accounts
+
+# =================================================================
+# Default Groups
+# =================================================================
+
+# Administrators Group
+dn: cn=admins,ou=groups,dc=company,dc=com
+objectClass: groupOfNames
+cn: admins
+description: System administrators with full access
+member: cn=admin,dc=company,dc=com
+
+# Users Group
+dn: cn=users,ou=groups,dc=company,dc=com
+objectClass: groupOfNames
+cn: users
+description: Regular users with basic access
+member: cn=admin,dc=company,dc=com
+
+# Developers Group
+dn: cn=developers,ou=groups,dc=company,dc=com
+objectClass: groupOfNames
+cn: developers
+description: Developers with development environment access
+member: cn=admin,dc=company,dc=com
+
+# Managers Group
+dn: cn=managers,ou=groups,dc=company,dc=com
+objectClass: groupOfNames
+cn: managers
+description: Managers with management access
+member: cn=admin,dc=company,dc=com
+
+# Support Group
+dn: cn=support,ou=groups,dc=company,dc=com
+objectClass: groupOfNames
+cn: support
+description: Support staff with support access
+member: cn=admin,dc=company,dc=com
+
+# =================================================================
+# Sample User Accounts
+# =================================================================
+
+# John Doe - Administrator
+dn: uid=john.doe,ou=users,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: john.doe
+cn: John Doe
+sn: Doe
+givenName: John
+displayName: John Doe
+mail: john.doe@company.com
+telephoneNumber: +82-10-1234-5678
+employeeNumber: EMP001
+title: System Administrator
+departmentNumber: IT
+description: System Administrator
+userPassword: {SSHA}5en6G6MezRroT3XKqkdPOmY/BFQ=
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/john.doe
+loginShell: /bin/bash
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# Jane Smith - Developer
+dn: uid=jane.smith,ou=users,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: jane.smith
+cn: Jane Smith
+sn: Smith
+givenName: Jane
+displayName: Jane Smith
+mail: jane.smith@company.com
+telephoneNumber: +82-10-2345-6789
+employeeNumber: EMP002
+title: Senior Developer
+departmentNumber: Development
+description: Senior Software Developer
+userPassword: {SSHA}8Dw9H2FezRroT3XKqkdPOmY/CFR=
+uidNumber: 1002
+gidNumber: 1002
+homeDirectory: /home/jane.smith
+loginShell: /bin/bash
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# Mike Johnson - Manager
+dn: uid=mike.johnson,ou=users,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: mike.johnson
+cn: Mike Johnson
+sn: Johnson
+givenName: Mike
+displayName: Mike Johnson
+mail: mike.johnson@company.com
+telephoneNumber: +82-10-3456-7890
+employeeNumber: EMP003
+title: Development Manager
+departmentNumber: Development
+description: Development Team Manager
+userPassword: {SSHA}7Cx8G1DezRroT3XKqkdPOmY/BER=
+uidNumber: 1003
+gidNumber: 1003
+homeDirectory: /home/mike.johnson
+loginShell: /bin/bash
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# Sarah Wilson - Support
+dn: uid=sarah.wilson,ou=users,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: sarah.wilson
+cn: Sarah Wilson
+sn: Wilson
+givenName: Sarah
+displayName: Sarah Wilson
+mail: sarah.wilson@company.com
+telephoneNumber: +82-10-4567-8901
+employeeNumber: EMP004
+title: Support Specialist
+departmentNumber: Support
+description: Customer Support Specialist
+userPassword: {SSHA}6Bv7F0CezRroT3XKqkdPOmY/ADS=
+uidNumber: 1004
+gidNumber: 1004
+homeDirectory: /home/sarah.wilson
+loginShell: /bin/bash
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# Test User
+dn: uid=test.user,ou=users,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: test.user
+cn: Test User
+sn: User
+givenName: Test
+displayName: Test User
+mail: test.user@company.com
+telephoneNumber: +82-10-5678-9012
+employeeNumber: EMP005
+title: Test Account
+departmentNumber: QA
+description: Test user account for development
+userPassword: {SSHA}5Au6E9BezRroT3XKqkdPOmY/ZCQ=
+uidNumber: 1005
+gidNumber: 1005
+homeDirectory: /home/test.user
+loginShell: /bin/bash
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# =================================================================
+# Group Memberships
+# =================================================================
+
+# Add John Doe to admins and users groups
+dn: cn=admins,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=john.doe,ou=users,dc=company,dc=com
+
+dn: cn=users,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=john.doe,ou=users,dc=company,dc=com
+
+# Add Jane Smith to developers and users groups
+dn: cn=developers,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=jane.smith,ou=users,dc=company,dc=com
+
+dn: cn=users,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=jane.smith,ou=users,dc=company,dc=com
+
+# Add Mike Johnson to managers, developers, and users groups
+dn: cn=managers,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=mike.johnson,ou=users,dc=company,dc=com
+
+dn: cn=developers,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=mike.johnson,ou=users,dc=company,dc=com
+
+dn: cn=users,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=mike.johnson,ou=users,dc=company,dc=com
+
+# Add Sarah Wilson to support and users groups
+dn: cn=support,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=sarah.wilson,ou=users,dc=company,dc=com
+
+dn: cn=users,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=sarah.wilson,ou=users,dc=company,dc=com
+
+# Add Test User to users group
+dn: cn=users,ou=groups,dc=company,dc=com
+changetype: modify
+add: member
+member: uid=test.user,ou=users,dc=company,dc=com
+
+# =================================================================
+# Application Entries
+# =================================================================
+
+# Sample Application 1
+dn: cn=app1,ou=applications,dc=company,dc=com
+objectClass: applicationProcess
+objectClass: top
+cn: app1
+description: Sample Application 1
+l: https://app1.example.com
+owner: uid=john.doe,ou=users,dc=company,dc=com
+
+# Sample Application 2
+dn: cn=app2,ou=applications,dc=company,dc=com
+objectClass: applicationProcess
+objectClass: top
+cn: app2
+description: Sample Application 2
+l: https://app2.example.com
+owner: uid=jane.smith,ou=users,dc=company,dc=com
+
+# Development Environment
+dn: cn=dev-env,ou=applications,dc=company,dc=com
+objectClass: applicationProcess
+objectClass: top
+cn: dev-env
+description: Development Environment
+l: https://dev.company.com
+owner: uid=mike.johnson,ou=users,dc=company,dc=com
+
+# Support Portal
+dn: cn=support-portal,ou=applications,dc=company,dc=com
+objectClass: applicationProcess
+objectClass: top
+cn: support-portal
+description: Customer Support Portal
+l: https://support.company.com
+owner: uid=sarah.wilson,ou=users,dc=company,dc=com
+
+# =================================================================
+# Service Accounts
+# =================================================================
+
+# IDCS Sync Service Account
+dn: uid=idcs-sync,ou=services,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: idcs-sync
+cn: IDCS Sync Service
+sn: Service
+givenName: IDCS Sync
+displayName: IDCS Synchronization Service
+mail: idcs-sync@company.com
+description: Service account for SSO platform
+userPassword: {SSHA}8Dw6G2FezRroT3XKqkdPOmY/CFP=
+uidNumber: 2002
+gidNumber: 2002
+homeDirectory: /var/lib/sso-service
+loginShell: /bin/false
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# =================================================================
+# POSIX Groups
+# =================================================================
+
+# Admin POSIX Group
+dn: cn=admin,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: admin
+gidNumber: 1001
+description: Administrative group
+
+# User POSIX Group
+dn: cn=user,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: user
+gidNumber: 1002
+description: Regular user group
+
+# Developer POSIX Group
+dn: cn=developer,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: developer
+gidNumber: 1003
+description: Developer group
+
+# Manager POSIX Group
+dn: cn=manager,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: manager
+gidNumber: 1004
+description: Manager group
+
+# Support POSIX Group
+dn: cn=support-staff,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: support-staff
+gidNumber: 1005
+description: Support staff group
+
+# Service POSIX Group
+dn: cn=service,ou=groups,dc=company,dc=com
+objectClass: posixGroup
+cn: service
+gidNumber: 2001
+description: Service accounts group
+
+# =================================================================
+# Access Control Lists (ACLs)
+# =================================================================
+
+# Note: ACLs should be configured in slapd.conf or via cn=config
+# These are sample ACL entries for reference
+
+# Sample ACL for user password access
+# access to attrs=userPassword
+#   by self write
+#   by group.exact="cn=admins,ou=groups,dc=company,dc=com" write
+#   by anonymous auth
+#   by * none
+
+# Sample ACL for user attributes
+# access to attrs=mail,telephoneNumber
+#   by self write
+#   by group.exact="cn=admins,ou=groups,dc=company,dc=com" write
+#   by users read
+#   by * none
+
+# Sample ACL for group membership
+# access to dn.subtree="ou=groups,dc=company,dc=com"
+#   by group.exact="cn=admins,ou=groups,dc=company,dc=com" write
+#   by users read
+#   by * none
+
+# =================================================================
+# Custom Schema Attributes (if needed)
+# =================================================================
+
+# Note: Custom schema should be defined in schema files
+# These are examples of custom attributes that might be useful
+
+# Example: Employee ID attribute
+# attributetype ( 1.3.6.1.4.1.1234.1.1.1
+#   NAME 'employeeID'
+#   DESC 'Employee ID number'
+#   EQUALITY caseIgnoreMatch
+#   SUBSTR caseIgnoreSubstringsMatch
+#   SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+#   SINGLE-VALUE )
+
+# Example: Application access attribute
+# attributetype ( 1.3.6.1.4.1.1234.1.1.2
+#   NAME 'applicationAccess'
+#   DESC 'Applications the user has access to'
+#   EQUALITY caseIgnoreMatch
+#   SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+# =================================================================
+# Password Policies (reference)
+# =================================================================
+
+# Note: Password policies should be configured via ppolicy overlay
+# These are example policy entries
+
+# Default Password Policy
+# dn: cn=default,ou=policies,dc=company,dc=com
+# objectClass: pwdPolicy
+# objectClass: person
+# objectClass: top
+# cn: default
+# sn: default
+# pwdAttribute: userPassword
+# pwdMaxAge: 7776000
+# pwdExpireWarning: 604800
+# pwdInHistory: 5
+# pwdCheckQuality: 1
+# pwdMinLength: 8
+# pwdMaxFailure: 5
+# pwdLockout: TRUE
+# pwdLockoutDuration: 1800
+# pwdGraceAuthNLimit: 3
+
+# =================================================================
+# Indices (reference)
+# =================================================================
+
+# Note: Indices should be configured in slapd.conf or via cn=config
+# These are recommended indices for performance
+
+# index uid eq
+# index cn eq,sub
+# index sn eq,sub
+# index mail eq,sub
+# index employeeNumber eq
+# index member eq
+# index objectClass eq
+# index entryCSN eq
+# index entryUUID eq
+
+# =================================================================
+# Replication Configuration (reference)
+# =================================================================
+
+# Note: This is a sample replication configuration
+# Actual replication should be configured based on requirements
+
+# Provider Configuration (Master)
+# moduleload syncprov
+# overlay syncprov
+# syncprov-checkpoint 100 10
+# syncprov-sessionlog 100
+
+# Consumer Configuration (Slave)
+# syncrepl rid=001
+#   provider=ldap://master.company.com:389
+#   type=refreshAndPersist
+#   retry="5 5 300 +"
+#   searchbase="dc=company,dc=com"
+#   bindmethod=simple
+#   binddn="uid=replicator,ou=services,dc=company,dc=com"
+#   credentials=replicator_password
+
+# =================================================================
+# Monitoring and Logging
+# =================================================================
+
+# Note: Monitoring entries for operational data
+# These should be enabled in configuration
+
+# cn=monitor tree provides operational information
+# dn: cn=monitor
+# objectClass: monitor
+
+# Statistics and performance data
+# dn: cn=Statistics,cn=monitor
+# objectClass: monitor
+
+# Connection information
+# dn: cn=Connections,cn=monitor
+# objectClass: monitor
+
+# =================================================================
+# Sample Queries for Testing
+# =================================================================
+
+# Test user authentication:
+# ldapsearch -x -H ldap://localhost:389 -D "uid=john.doe,ou=users,dc=company,dc=com" -W -b "dc=company,dc=com" "(uid=john.doe)"
+
+# Search all users:
+# ldapsearch -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -b "ou=users,dc=company,dc=com" "(objectClass=inetOrgPerson)"
+
+# Search all groups:
+# ldapsearch -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -b "ou=groups,dc=company,dc=com" "(objectClass=groupOfNames)"
+
+# Check group membership:
+# ldapsearch -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -b "cn=admins,ou=groups,dc=company,dc=com" "(objectClass=groupOfNames)" member
+
+# =================================================================
+# Notes for IDCS Integration
+# =================================================================
+
+# When integrating with OCI IDCS, consider the following:
+# 1. User mapping between LDAP and IDCS attributes
+# 2. Group synchronization strategies
+# 3. Conflict resolution for duplicate users
+# 4. Regular synchronization scheduling
+# 5. Error handling and logging
+# 6. Backup and recovery procedures
+
+# Sample attribute mappings:
+# LDAP uid -> IDCS userName
+# LDAP mail -> IDCS emails[0].value
+# LDAP givenName -> IDCS name.givenName
+# LDAP sn -> IDCS name.familyName
+# LDAP cn -> IDCS displayName
+# LDAP member -> IDCS groups
+
+# =================================================================
+# Security Considerations
+# =================================================================
+
+# 1. Use LDAPS (LDAP over SSL/TLS) in production
+# 2. Implement proper access controls and ACLs
+# 3. Regular password policy enforcement
+# 4. Monitor and audit all directory operations
+# 5. Backup directory data regularly
+# 6. Use service accounts with minimal privileges
+# 7. Implement account lockout policies
+# 8. Regular security reviews and updates
+
+# =================================================================
+# Maintenance Scripts
+# =================================================================
+
+# Sample maintenance operations:
+
+# Add new user:
+# ldapadd -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -f new_user.ldif
+
+# Modify user:
+# ldapmodify -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -f modify_user.ldif
+
+# Delete user:
+# ldapdelete -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W "uid=username,ou=users,dc=company,dc=com"
+
+# Change password:
+# ldappasswd -x -H ldap://localhost:389 -D "cn=admin,dc=company,dc=com" -W -S "uid=username,ou=users,dc=company,dc=com"
+
+# Backup directory:
+# slapcat -n 1 -l backup.ldif
+
+# Restore directory:
+# slapadd -n 1 -l backup.ldif
+
+# =================================================================
+# End of LDIF file
+# ================================================================= for IDCS synchronization
+userPassword: {SSHA}9Ex7H3GezRroT3XKqkdPOmY/DGT=
+uidNumber: 2001
+gidNumber: 2001
+homeDirectory: /var/lib/idcs-sync
+loginShell: /bin/false
+shadowLastChange: 19000
+shadowMax: 99999
+shadowWarning: 7
+
+# SSO Service Account
+dn: uid=sso-service,ou=services,dc=company,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: sso-service
+cn: SSO Service
+sn: Service
+givenName: SSO
+displayName: Single Sign-On Service
+mail: sso-service@company.com
+description: Service account

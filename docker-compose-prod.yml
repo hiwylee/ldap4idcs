@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sso_postgres_prod
+    environment:
+      POSTGRES_DB: sso_db
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sso_network
+    restart: unless-stopped
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sso_user -d sso_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # OpenLDAP Server
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: sso_openldap_prod
+    environment:
+      LDAP_ORGANISATION: "Company"
+      LDAP_DOMAIN: "company.com"
+      LDAP_ADMIN_PASSWORD_FILE: /run/secrets/ldap_admin_password
+      LDAP_CONFIG_PASSWORD_FILE: /run/secrets/ldap_config_password
+      LDAP_RFC2307BIS_SCHEMA: "true"
+      LDAP_BACKEND: "mdb"
+      LDAP_TLS: "true"
+      LDAP_TLS_CRT_FILENAME: "ldap.crt"
+      LDAP_TLS_KEY_FILENAME: "ldap.key"
+      LDAP_TLS_CA_CRT_FILENAME: "ca.crt"
+      LDAP_REPLICATION: "false"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      - ./ldap/init.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif
+      - ./ssl/ldap.crt:/container/service/slapd/assets/certs/ldap.crt
+      - ./ssl/ldap.key:/container/service/slapd/assets/certs/ldap.key
+      - ./ssl/ca.crt:/container/service/slapd/assets/certs/ca.crt
+    networks:
+      - sso_network
+    restart: unless-stopped
+    secrets:
+      - ldap_admin_password
+      - ldap_config_password
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldaps://localhost:636 -D 'cn=admin,dc=company,dc=com' -w \"$(cat /run/secrets/ldap_admin_password)\" -b 'dc=company,dc=com' -s base"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Redis for Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: sso_redis_prod
+    command: redis-server --requirepass $(cat /run/secrets/redis_password)
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - sso_network
+    restart: unless-stopped
+    secrets:
+      - redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$(cat /run/secrets/redis_password)", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: sso_backend_prod
+    environment:
+      - DATABASE_URL=postgresql://sso_user:$(cat /run/secrets/postgres_password)@postgres:5432/sso_db
