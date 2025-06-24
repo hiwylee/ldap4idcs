@@ -26,26 +26,27 @@ ldap/
 └── Dockerfile
 ```
 
-### 2. SSL/TLS 인증서 생성
+### 2. Let's Encrypt를 사용한 SSL/TLS 인증서 생성
 
-개발을 위한 자체 서명 인증서를 생성하거나 프로덕션을 위한 적절한 인증서를 획득하세요:
+Let's Encrypt를 사용하여 무료로 신뢰할 수 있는 SSL/TLS 인증서를 발급받을 수 있습니다. 이를 위해 Certbot을 사용하겠습니다:
 
 ```bash
 # 인증서 디렉토리 생성
 mkdir -p certs
 
-# CA 키와 인증서 생성
-openssl genrsa -out certs/ca.key 4096
-openssl req -new -x509 -days 365 -key certs/ca.key -out certs/ca.crt -subj "/CN=LDAP CA"
+# Certbot 설치 (Oracle Linux용)
+sudo dnf install -y epel-release
+sudo dnf install -y certbot
 
-# 서버 키 생성
-openssl genrsa -out certs/ldap.key 2048
+# Let's Encrypt 인증서 발급 받기 (스탠드얼론 모드)
+sudo certbot certonly --standalone -d ldapv3-idp.duckdns.org --agree-tos --email admin@example.com --non-interactive
 
-# 인증서 서명 요청(CSR) 생성
-openssl req -new -key certs/ldap.key -out certs/ldap.csr -subj "/CN=ldapv3-idp.duckdns.org"
+# 인증서 파일을 OpenLDAP에서 사용할 위치로 복사
+sudo cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/fullchain.pem certs/ldap.crt
+sudo cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/privkey.pem certs/ldap.key
 
-# CA로 인증서 서명
-openssl x509 -req -days 365 -in certs/ldap.csr -CA certs/ca.crt -CAkey certs/ca.key -CAcreateserial -out certs/ldap.crt
+# CA 인증서 복사
+sudo cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/chain.pem certs/ca.crt
 
 # 향상된 보안을 위한 dhparam 파일 생성
 openssl dhparam -out certs/dhparam.pem 2048
@@ -53,9 +54,12 @@ openssl dhparam -out certs/dhparam.pem 2048
 # 적절한 권한 설정
 chmod 600 certs/ldap.key
 chmod 644 certs/ldap.crt certs/ca.crt
+
+# 인증서 자동 갱신을 위한 cron 작업 추가
+echo "0 0 1 * * root certbot renew --quiet && cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/fullchain.pem /path/to/certs/ldap.crt && cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/privkey.pem /path/to/certs/ldap.key && cp /etc/letsencrypt/live/ldapv3-idp.duckdns.org/chain.pem /path/to/certs/ca.crt && systemctl restart openldap" | sudo tee -a /etc/crontab
 ```
 
-`ldapv3-idp.duckdns.org`를 실제 도메인 이름으로 교체하세요.
+위 명령어에서 `ldapv3-idp.duckdns.org`를 실제 도메인 이름으로 교체하고, `admin@example.com`을 실제 이메일 주소로 변경하세요. 또한, 인증서 갱신 스크립트에서 `/path/to/certs/`를 실제 인증서 경로로 변경해야 합니다.
 
 ### 3. OpenLDAP 설정
 
